@@ -1,0 +1,25 @@
+---
+apache_vhosts:
+  - {
+    server_name: 'hello.io',
+    root: '/var/www/hello.io',
+    document_root: '/var/www/hello.io/public'
+  }
+  - {
+    server_name: 'gambo.io',
+    root: '/var/www/gambo.io',
+    document_root: '/var/www/gambo.io'
+  }
+
+apache_ssl_vhosts:
+- {
+  server_name: 'hello.io',
+  root: '/var/www/hello.io',
+  document_root: '/var/www/hello.io/public',
+  certificate_file: 'hello.io.crt',
+  certificate_key_file: 'hello.io.key'
+}
+
+apache_mods_enabled:
+  - ssl.load
+  - rewrite.load

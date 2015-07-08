@@ -1,0 +1,32 @@
+ErrorLog ${APACHE_LOG_DIR}/error.log
+CustomLog ${APACHE_LOG_DIR}/access.log combined
+
+{% for vhost in apache_vhosts %}
+    <VirtualHost *:80>
+        ServerName {{ vhost.server_name }}
+        DocumentRoot {{ vhost.document_root }}
+        <Directory {{ vhost.document_root }}>
+            AllowOverride All
+        </Directory>
+    </VirtualHost>
+{% endfor %}
+
+<IfModule mod_ssl.c>
+    {% for vhost in apache_ssl_vhosts %}
+        <VirtualHost *:443>
+            ServerName {{ vhost.server_name }}
+            DocumentRoot {{ vhost.document_root }}
+            <Directory {{ vhost.document_root }}>
+                AllowOverride All
+            </Directory>
+            SSLEngine on
+            SSLCertificateFile /etc/ssl/apache2/{{ vhost.certificate_file }}
+            SSLCertificateKeyFile /etc/ssl/apache2/{{ vhost.certificate_key_file }}
+            {% if vhost.extra_parameters is defined %}
+                {{ vhost.extra_parameters }}
+            {% endif %}
+        </VirtualHost>
+    {% endfor %}
+</IfModule>
+
+# vim: syntax=apache ts=4 sw=4 sts=4 sr noet

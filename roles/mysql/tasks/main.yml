@@ -1,0 +1,36 @@
+---
+- name: Install MySQL
+  apt:
+    name: mysql-server
+    state: present
+    update_cache: true
+
+- name: Write mysqld.cnf
+  action: template src=mysqld.cnf.j2 dest=/etc/mysql/conf.d/mysqld.cnf
+  notify:
+    - restart_mysql
+
+- name: Write client.cnf
+  action: template src=client.cnf.j2 dest=/etc/mysql/conf.d/client.cnf
+  notify:
+    - restart_mysql
+
+- name: Install MySQL Python Support for Ansible
+  apt:
+    name: python-mysqldb
+    state: present
+    update_cache: true
+  register: mysql_python_installed
+
+- name: Create MySQL Database
+  when: mysql_python_installed|success
+  mysql_db:
+    name: hello
+    state: present
+
+- name: Add MySQL user
+  when: mysql_python_installed|success
+  mysql_user:
+    name: hello
+    password: XM2*3gehN2sJoU^f^f
+    priv: hello.*:ALL

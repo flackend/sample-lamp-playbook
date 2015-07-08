@@ -1,0 +1,67 @@
+---
+- name: Install Apache
+  apt: pkg=apache2 state=present update_cache=true
+  register: apache_installed
+  notify:
+    - restart_apache
+
+- name: Ensure Apache is running and to start at boot
+  service: name=apache2 state=started enabled=yes
+
+- name: Enable Modules
+  when: apache_installed|success
+  file: src=/etc/apache2/mods-available/{{ item }} dest=/etc/apache2/mods-enabled/{{ item }} state=link
+  with_items: apache_mods_enabled
+  notify:
+    - restart_apache
+
+- name: Remove Default Site Config Files
+  when: apache_installed|success
+  file: dest={{ item.path }} state=absent
+  with_items:
+    - { path: '/etc/apache2/sites-available/000-default.conf' }
+    - { path: '/etc/apache2/sites-available/default-ssl.conf' }
+    - { path: '/etc/apache2/sites-enabled/000-default.conf' }
+
+- name: Remove Default Apache HTML
+  when: apache_installed|success
+  file: dest=/var/www/html state=absent
+
+- name: Add Virtual Hosts Configuration
+  when: apache_installed|success
+  register: sites_configured
+  template: src=vhosts.conf.j2 dest=/etc/apache2/sites-available/vhosts.conf owner=root group=root
+  notify:
+    - restart_apache
+
+- name: Enable Site Config
+  when: sites_configured|success
+  file: src=/etc/apache2/sites-available/vhosts.conf dest=/etc/apache2/sites-enabled/vhosts.conf state=link
+  notify:
+    - restart_apache
+
+- name: Link Site Files
+  when: apache_installed|success
+  file: src=/vagrant/{{ item.server_name }} dest={{ item.root }} state=link owner=vagrant group=www-data
+  with_items: apache_vhosts
+  notify:
+    - restart_apache
+
+- name: Create SSL certs directory
+  when: apache_installed|success
+  file: dest=/etc/ssl/apache2 state=directory owner=root group=root mode=0700
+  register: ssl_certs_directory_created
+
+- name: Copy SSL certs
+  when: ssl_certs_directory_created|success
+  copy: src={{ item.certificate_file }} dest=/etc/ssl/apache2 owner=root group=root mode=0755
+  with_items: apache_ssl_vhosts
+  notify:
+    - restart_apache
+
+- name: Copy SSL keys
+  when: ssl_certs_directory_created|success
+  copy: src={{ item.certificate_key_file }} dest=/etc/ssl/apache2/{{ item.certificate_key_file }} owner=root group=root mode=0755
+  with_items: apache_ssl_vhosts
+  notify:
+    - restart_apache
